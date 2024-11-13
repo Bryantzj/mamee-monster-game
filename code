@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mamee Monster Catch Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            width: 90vw; /* Adjust width for smaller screens */
+            height: calc(90vw * 875 / 700); /* Maintain aspect ratio */
+            max-width: 700px; 
+            max-height: 875px;
+        }
+
+        #game-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        #monster {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15%;
+        }
+
+        .snack, .sweet, .bomb {
+            position: absolute;
+            width: 10%; /* Smaller size for mobile screens */
+        }
+
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem; /* Adjust font size for readability */
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #prize-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #333;
+            text-align: center;
+            display: none;
+        }
+
+        #start-button, #retry-button {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-area">
+            <img id="background" src="https://i.postimg.cc/cJXkxxdx/Yellow-Illustrative-Book-Club-Flyer-Logo-1.png" alt="Game Background">
+            <img id="monster" src="https://i.postimg.cc/pLhZcn55/mamee-monsteer-removebg-preview-Photoroom.png" alt="Monster">
+            <div id="scoreboard">
+                <span>Score: <span id="score">0</span></span> | Timer: <span id="timer">40</span>s
+            </div>
+            <div id="prize-message"></div>
+            <button id="start-button">Start Game</button>
+            <button id="retry-button">Retry</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 40;
+        let timer;
+        const monster = document.getElementById("monster");
+        const scoreDisplay = document.getElementById("score");
+        const timerDisplay = document.getElementById("timer");
+        const prizeMessage = document.getElementById("prize-message");
+        const gameArea = document.getElementById("game-area");
+        const startButton = document.getElementById("start-button");
+        const retryButton = document.getElementById("retry-button");
+
+        let fallIntervals = [];
+        let gameRunning = false;
+
+        window.onload = () => {
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+            startButton.style.display = "block";
+        };
+
+        function startGame() {
+            startButton.style.display = "none";
+            retryButton.style.display = "none";
+            prizeMessage.style.display = "none";
+            score = 0;
+            timeLeft = 40;
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+            gameRunning = true;
+
+            timer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame("Game over! Try again.");
+                }
+            }, 1000);
+
+            createFallingObjects();
+        }
+
+        function endGame(message) {
+            gameRunning = false;
+            clearInterval(timer);
+            fallIntervals.forEach(interval => clearInterval(interval));
+            fallIntervals = [];
+            prizeMessage.textContent = message;
+            prizeMessage.style.display = "block";
+            retryButton.style.display = "block";
+        }
+
+        function retryGame() {
+            endGame(""); 
+            prizeMessage.style.display = "none"; 
+            retryButton.style.display = "none"; 
+            startGame();
+        }
+
+        gameArea.addEventListener("touchmove", (e) => {
+            const gameRect = gameArea.getBoundingClientRect();
+            const touchX = e.touches[0].clientX - gameRect.left;
+            const monsterWidth = monster.offsetWidth;
+            const maxX = gameArea.clientWidth - monsterWidth;
+
+            const newPosX = Math.min(Math.max(touchX - monsterWidth / 2, 0), maxX);
+            monster.style.left = `${newPosX}px`;
+        });
+
+        function createFallingObjects() {
+            if (!gameRunning) return;
+
+            const objectTypes = ["snack", "sweet", "bomb"];
+            const randomType = objectTypes[Math.floor(Math.random() * 3)];
+            const object = document.createElement("img");
+
+            let objectImg, pointValue;
+            if (randomType === "snack") {
+                objectImg = "https://i.postimg.cc/8cpNkGgM/snacks-Photoroom.png";
+                pointValue = 10;
+            } else if (randomType === "sweet") {
+                objectImg = "https://i.postimg.cc/CxqGsT9j/sweet-Photoroom.png";
+                pointValue = -5;
+            } else {
+                objectImg = "https://i.postimg.cc/gjzsgS3G/bomb-Photoroom.png";
+                pointValue = -5;
+            }
+
+            object.src = objectImg;
+            object.classList.add(randomType);
+            object.style.width = "10%";
+            object.style.position = "absolute";
+            let startX = Math.random() * (gameArea.clientWidth - 60);
+            object.style.left = `${startX}px`;
+            object.style.top = "-60px";
+            gameArea.appendChild(object);
+
+            let objectY = -60;
+            let fallInterval = setInterval(() => {
+                if (!gameRunning) { 
+                    clearInterval(fallInterval);
+                    return;
+                }
+
+                objectY += 10;
+                object.style.top = `${objectY}px`;
+
+                if (objectY >= gameArea.clientHeight - 100 &&
+                    parseInt(monster.style.left) < object.offsetLeft + 60 && 
+                    parseInt(monster.style.left) + 120 > object.offsetLeft) {
+
+                    score += pointValue;
+                    scoreDisplay.textContent = score;
+
+                    if (score >= 200) {
+                        endGame("Congratulations! You did it!");
+                    }
+
+                    gameArea.removeChild(object);
+                    clearInterval(fallInterval);
+                }
+
+                if (objectY > gameArea.clientHeight) {
+                    gameArea.removeChild(object);
+                    clearInterval(fallInterval);
+                }
+            }, 30);
+
+            fallIntervals.push(fallInterval);
+            if (gameRunning) setTimeout(createFallingObjects, 800);
+        }
+
+        startButton.addEventListener("click", startGame);
+        retryButton.addEventListener("click", retryGame);
+    </script>
+</body>
+</html>
